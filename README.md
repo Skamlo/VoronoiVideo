@@ -1,14 +1,15 @@
 # Voronoi Video
 > Module to generating voronoi videos and images.
-> Project [_here_](https://github.com/name.com)
+
+> Project [_here_](https://github.com/Skamlo/VoronoiVideo)
 
 
 ## General Information and Setup
 
-##### Setup
+#### Setup
 If you want to run this module you have to install three packages - `numpy`, `cv2` and `scipy`. You can do it with pip method by typing `pip install numpy cv2 scipy` cammand in system console.
 
-##### Generating Voronoi Video
+#### Generating Voronoi Video
 from voronoiImage import VoronoiImage
 
 and another set parameters:
@@ -18,7 +19,7 @@ and another set parameters:
 `points`: Array of points with shape (numberOfPoints, 2). Correct data types is list, tuple or np.ndarry. Or int value with number of random points.
 
 
-##### Generating Voronoi Image
+#### Generating Voronoi Image
 from voronoiImage import VoronoiVideo
 
 and another set parameters:
@@ -34,17 +35,12 @@ and another set parameters:
 `frameCounting`: Displaying the number of frames in the console. Only bool values.
 
 
-##### Results
+#### Results
 In result, you get these types of images:
 
 <!-- image source: https://commons.wikimedia.org/wiki/File:Girl_with_a_Pearl_Earring.jpg -->
-<!-- ![normal](img/The_Girl_With_The_Pearl_Earring.png.png)
-![voronoi](img/The_Girl_With_The_Pearl_Earring_5000nPts.png.png) -->
-
-<p float="left">
-  <img src="img/The_Girl_With_The_Pearl_Earring.png.png" width="50%" />
-  <img src="img/The_Girl_With_The_Pearl_Earring_5000nPts.png.png" width="50%" /> 
-</p>
+![normal](img/The_Girl_With_The_Pearl_Earring.png.png)
+![voronoi](img/The_Girl_With_The_Pearl_Earring_5000nPts.png.png)
 
 
 ## Technologies Used

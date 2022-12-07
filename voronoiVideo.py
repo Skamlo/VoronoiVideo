@@ -1,0 +1,384 @@
+import numpy as np
+from scipy.spatial import Voronoi
+import cv2 as cv
+import os
+
+class VoronoiImage():
+    @staticmethod
+
+    def __minMax(points: np.array) -> np.array:
+        points = points.astype('float32')
+        pointsTranspose = points.transpose()
+        maxValueX = pointsTranspose[0].max()
+        minValueX = pointsTranspose[0].min()
+        maxValueY = pointsTranspose[1].max()
+        minValueY = pointsTranspose[1].min()
+
+        for i in range(len(points)):
+            points[i][0] = (points[i][0] - minValueX)/(maxValueX - minValueX)
+            points[i][1] = (points[i][1] - minValueY)/(maxValueY - minValueY)
+
+        return points
+
+
+    def __checkPointInPolygon(x: int, y: int, poly: list) -> bool:
+        n = len(poly)
+        inside = False
+        p2x = 0.0
+        p2y = 0.0
+        a = 0.0
+        p1x,p1y = poly[0]
+        for i in range(n+1):
+            p2x,p2y = poly[i % n]
+            if y > min(p1y,p2y):
+                if y <= max(p1y,p2y):
+                    if x <= max(p1x,p2x):
+                        if p1y != p2y:
+                            a = (y-p1y)*(p2x-p1x)/(p2y-p1y)+p1x
+                        if p1x == p2x or x <= a:
+                            inside = not inside
+            p1x,p1y = p2x,p2y
+
+        return inside
+
+
+    def generate(image, points, saveInDirectory: bool = False, outputDirectoryPath: str = None) -> np.ndarray:
+        """
+        ### Parameters
+        `image`: Array of image. Only list, tuple np.ndarray or string with path to image. Shape of image 
+        can be (height, width, channels) or (height, width) in one channel case.
+
+        `points`: Array of points with shape (numberOfPoints, 2). Correct data types is list, tuple or 
+        np.ndarry. Or int value with number of random points.
+
+
+        ### Returns
+        out: np.ndarray
+
+        Array of voronoi image.
+        """
+
+        # ERRORS DETECTION
+        allCorrect = True
+        fileName = ''
+        pointsLen = 1
+
+        # image
+        if isinstance(image, str):
+            try:
+                fileName = os.path.basename(image).split('.')[0]
+                image = cv.imread(image)
+            except FileNotFoundError as e:
+                allCorrect = False
+                print('This file does not exist.')
+                print(e)
+
+        elif isinstance(image, np.ndarray):
+            if not (len(image.shape) == 2 or len(image.shape) == 3):
+                allCorrect = False
+                print("""Incorrect image shape. Correct shape is (xSize, ySize, channels)
+                        or (xSize, ySize) in one channel case.""")
+
+        elif isinstance(image, list) or isinstance(image, tuple):
+            image = np.array(image)
+            if not (len(image.shape) == 2 or len(image.shape) == 3):
+                allCorrect = False
+                print("""Incorrect image shape. Correct shape is (xSize, ySize, channels)
+                        or (xSize, ySize) in one channel case.""")
+        else:
+            allCorrect = False
+            print("Incorrect image data type. Only list, tuple, np.ndarray or string with path do image.")
+
+        # points
+        if isinstance(points, list) or isinstance(points, tuple) or isinstance(points, np.ndarray):
+            if not isinstance(points, np.ndarray):
+                points = np.array(points)
+
+            if not (len(points.shape) == 2 and points.shape[1] == 2):
+                allCorrect = False
+                print("Incorrect points shape. Correct shape is (nPoints, 2). second")
+        elif isinstance(points, int):
+            if points > 1:
+                points = np.random.random((points, 2))
+            else:
+                allCorrect = False
+                print("Incorrect nPoints value. nPoints must be greater or equal than 2.")
+
+        else:
+            allCorrect = False
+            print("""Incorrect points data type. Only list, 
+                     tuple or np.array with points coodinations 
+                     or int value with number of random points.""")
+
+        if allCorrect:
+            pointsLen = len(points)
+
+        # saveInDirectory
+        if not isinstance(saveInDirectory, bool):
+            allCorrect = False
+            print("Incorrect saveInDirectory value. Only bool.")
+
+        # outputDirectory
+        if allCorrect:
+            if outputDirectoryPath is None:
+                outputDirectoryPath = ''
+            elif isinstance(outputDirectoryPath, str):
+                if not os.path.exists(outputDirectoryPath):
+                    allCorrect = False
+                    print("Incorrect outputDirectoryPath. Path to output directory is wrong or doesn't exist.")
+            else:
+                allCorrect = False
+                print("Incorrect outputDirectoryPath data type. Only string with path to directory.")
+
+        if allCorrect:
+            # Params
+            image = np.array(image)
+            size = (image.shape[0], image.shape[1])
+            nPoints = len(points)
+
+            # Min max scaling and adding outside triangle points
+            points = VoronoiImage.__minMax(points)
+            points = np.append(points, [[0, 100]], axis=0)
+            points = np.append(points, [[-100, -100]], axis=0)
+            points = np.append(points, [[100, -100]], axis=0)
+
+            # Generating voronoi mesh
+            vor = Voronoi(points)
+
+            # Points and regions validation
+            ptn = vor.points[0:-3]
+            reg = []
+
+            for region in vor.regions[1:]:
+                if (not -1 in region):
+                    reg.append(region)
+
+            # Points scaling
+            ptn = np.array(ptn).transpose()
+            ptn[0] = ptn[0] * (size[0] - 1)
+            ptn[1] = ptn[1] * (size[1] - 1)
+            ptn = ptn.astype('uint16')
+            ptn = ptn.transpose()
+
+            # Vertices scaling
+            ver = np.array(vor.vertices).transpose()
+            ver[0] = ver[0] * (size[0] - 1)
+            ver[1] = ver[1] * (size[1] - 1)
+            ver = ver.transpose()
+
+            # Colors
+            colors = []
+            for point in ptn:
+                colors.append(tuple(image[point[0]][point[1]]))
+
+            # Drawing
+            outputImage = np.full((size[1], size[0], 3), 255)
+
+            for i, region in enumerate(reg):
+                polygonPoints = []
+                for value in region:
+                    polygonPoints.append(tuple(ver[value]))
+
+                for i in range(len(ptn)):
+                    # 65535 because points data type is uint16
+                    if not ptn[i][0] == 65535:
+                        if VoronoiImage.__checkPointInPolygon(ptn[i][0], ptn[i][1], polygonPoints):
+                            ptn[i][0] = 65535
+                            break
+
+                # color setting
+                color = (0, 0, 0)
+                if isinstance(colors[i], tuple):
+                    color = (int(colors[i][2]), int(colors[i][1]), int(colors[i][0]))
+                if isinstance(colors[i], int):
+                    color = (int(colors[i]), int(colors[i]), int(colors[i]))
+
+                cv.fillPoly(outputImage, [np.int32(polygonPoints)], color)
+
+            # Image rotating and flipping
+            border = int((max(size)-min(size))/2)
+
+            imageTemp = np.zeros((max(size), max(size), 3), dtype='int32')
+
+            if size[0] > size[1]: # vertical
+                imageTemp[border:size[1]+border, 0:size[0]] = outputImage
+            else: # horizontal
+                imageTemp[0:size[1], border:size[0]+border] = outputImage
+
+            outputImage = np.rot90(imageTemp, k=3, axes=(0, 1))
+
+            if size[0] > size[1]: # vertical
+                outputImage = outputImage[0:size[0], border:border+size[1]]
+            else: # horizontal
+                outputImage = outputImage[border:border+size[0], 0:size[1]]
+
+            outputImage = np.fliplr(outputImage)
+            outputImage = outputImage.astype('uint8')
+
+            if saveInDirectory:
+                # generating file name
+                outputFileName = outputDirectoryPath
+                if outputFileName != '':
+                    if not (outputFileName[-1] == '/' or outputFileName[-1] == '\\'):
+                        outputFileName += '/'
+                outputFileName += fileName
+                outputFileName += '_' + str(pointsLen) + "nPts"
+
+                # checing if file with outputFileName exist
+                iter = -1
+                while True:
+                    iter += 1
+                    if iter == 0:
+                        if not os.path.isfile(outputFileName + ".png"):
+                            outputFileName += ".png"
+                            break
+                    else:
+                        if not os.path.isfile(outputFileName + "(" + str(iter+1) + ")" + ".png"):
+                            outputFileName += "({}).png".format(str(int(iter+1)))
+                            break
+                
+                saveImage = cv.cvtColor(outputImage, cv.COLOR_RGB2BGR)
+                cv.imwrite(outputFileName, saveImage)
+
+            return outputImage
+
+
+class VoronoiVideo():
+    @staticmethod
+
+    def generate(videoPath, nPoints: int = 1000, outputDirectoryPath: str = None, outputFrameRate: int = None, frameCounting = True):
+        """
+        ### Parameters
+        `videoPath`: Path to video. Only string values.
+
+        `nPoints`: Number of random points. More points is more calcualtions and longer waiting time. Only 
+        int values.
+
+        `outputDirectoryPath`: Directory path where the video will be generated. If outputDirectoryPath is 
+        None type then video will be generated in directory where the currently executing file is located. 
+        Only string values.
+
+        `outputFrameRate`: Frame per seconds (FPS) in output video. Only int or float values.
+
+        `frameCounting`: Displaying the number of frames in the console. Only bool values.
+
+        ### Returns
+        out: video in .mp4 data type
+        """
+
+        # VALIDATION
+        allCorrect = True
+        #video
+        if isinstance(videoPath, str):
+            if not os.path.isfile(videoPath):
+                allCorrect = False
+                print("Incorrect videoPath. Path is wrong or file doesn't exist.")
+        else:
+            allCorrect = False
+            print("Incorrect videoPath data type. Only string with path to video.")
+
+        # outputDirectory
+        if allCorrect:
+            if outputDirectoryPath is None:
+                outputDirectoryPath = ''
+            elif isinstance(outputDirectoryPath, str):
+                if not os.path.exists(outputDirectoryPath):
+                    allCorrect = False
+                    print("Incorrect outputDirectoryPath. Path to output directory is wrong or doesn't exist.")
+            else:
+                allCorrect = False
+                print("Incorrect outputDirectoryPath data type. Only string with path to directory.")
+
+        # nPoints
+        if allCorrect:
+            if isinstance(nPoints, int):
+                if nPoints < 2:
+                    allCorrect = False
+                    print("Incorrect nPoint value. Only int values greater than 2.")
+            else:
+                allCorrect = False
+                print("Incorrect nPoint value. Only int values greater than 2.")
+
+        # outputFrameRate
+        if allCorrect:
+            if outputFrameRate is None:
+                pass
+            elif isinstance(outputFrameRate, int) or isinstance(outputFrameRate, float):
+                if outputFrameRate < 1:
+                    allCorrect = False
+                    print("Incorrect outputFps value. Only positive int or float values.")
+            else:
+                allCorrect = False
+                print("Incorrect outputFps value. Only positive int or float values.")
+        
+
+        # GENERATING
+        listOfFrames = []
+        listOfVoronoiFrames = []
+
+        # importing video
+        capture = cv.VideoCapture(videoPath)
+
+        # converter calculeting
+        fps = int(round(capture.get(cv.CAP_PROP_FPS), 0))
+        if outputFrameRate is None:
+            outputFrameRate = fps
+        converter = max(fps / outputFrameRate, 1)
+
+        # reading frames
+        index = 0
+        while True:
+            isTrue, frame = capture.read()
+            if not isTrue:
+                break
+            if index % converter < 1:
+                listOfFrames.append(frame)
+            index += 1
+
+        # release memory space
+        capture.release()
+
+        # conveting all frames to voronoi
+        listLong = len(listOfFrames)
+        for i, frame in enumerate(listOfFrames):
+            if frameCounting:
+                print("Frame: " + str(i+1) + '/' + str(listLong), end=' | ')
+                print(str(round(((i+1) / listLong * 100), 1)) + '%', end='\r')
+                if i+1 == listLong:
+                    print(" " * (17 + 2 * len(str(listLong))), end='\r')
+                    print("Done")
+            listOfVoronoiFrames.append(VoronoiImage.generate(frame, nPoints))
+
+        # deleting unnecessary list
+        del(listOfFrames)
+        
+        # generating file name
+        outputFileName = outputDirectoryPath
+        if outputFileName != '':
+            if not (outputFileName[-1] == '/' or outputFileName[-1] == '\\'):
+                outputFileName += '/'
+        outputFileName += os.path.basename(videoPath).split('.')[0]
+        outputFileName += '_' + str(outputFrameRate) + "fps_" + str(nPoints) + "nPts"
+
+        # checing if file with outputFileName exist
+        iter = -1
+        while True:
+            iter += 1
+            if iter == 0:
+                if not os.path.isfile(outputFileName + ".mp4"):
+                    outputFileName += ".mp4"
+                    break
+            else:
+                if not os.path.isfile(outputFileName + "(" + str(iter+1) + ")" + ".mp4"):
+                    outputFileName += "({}).mp4".format(str(int(iter+1)))
+                    break
+
+        # video params
+        codec = cv.VideoWriter_fourcc('m', 'p', '4', 'v')
+        resolution = (listOfVoronoiFrames[0].shape[1], listOfVoronoiFrames[0].shape[0])
+
+        # exporting video
+        videoOutput = cv.VideoWriter(outputFileName, codec, outputFrameRate, resolution)
+        for frame in listOfVoronoiFrames:
+            videoOutput.write(frame)
+        videoOutput.release()

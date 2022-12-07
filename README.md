@@ -9,8 +9,8 @@
 ### Setup
 If you want to run this module you have to install three packages - `numpy`, `cv2` and `scipy`. You can do it with pip method by typing `pip install numpy cv2 scipy` cammand in system console.
 
-### Generating Voronoi Video
-from voronoiImage import VoronoiImage
+### Generating Voronoi Image
+<span style="color:#9579c0">from</span> <span style="color:#4ec9b0">voronoiVideo</span> <span style="color:#9579c0">import</span> <span style="color:#4ec9b0">VoronoiImage</span>
 
 and another set parameters:
 
@@ -19,8 +19,8 @@ and another set parameters:
 `points`: Array of points with shape (numberOfPoints, 2). Correct data types is list, tuple or np.ndarry. Or int value with number of random points.
 
 
-### Generating Voronoi Image
-from voronoiImage import VoronoiVideo
+### Generating Voronoi Video
+<span style="color:#9579c0">from</span> <span style="color:#4ec9b0">voronoiVideo</span> <span style="color:#9579c0">import</span> <span style="color:#4ec9b0">VoronoiVideo</span>
 
 and another set parameters:
 

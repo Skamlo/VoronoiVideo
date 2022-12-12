@@ -36,7 +36,7 @@ and another set parameters:
 
 
 ### Results
-In result, you get these types of images:
+In result, you get these types of images or videos in the same style:
 
 <!-- image source: https://commons.wikimedia.org/wiki/File:Girl_with_a_Pearl_Earring.jpg -->
 <p float="left">

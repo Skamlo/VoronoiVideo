@@ -2,6 +2,7 @@ import numpy as np
 from scipy.spatial import Voronoi
 import cv2 as cv
 import os
+import time
 
 class VoronoiImage():
     @staticmethod
@@ -246,6 +247,33 @@ class VoronoiImage():
 class VoronoiVideo():
     @staticmethod
 
+    def __printEstimatedTime(time: float):
+        hour   = int(round(time // 3600, 0))
+        minute = int(round((time // 60) % 60, 0))
+        second = int(round(time % 60, 0))
+
+        if hour != 0 or minute != 0 or second != 0:
+            print(" | Estiamted time:", end=' ')
+
+        if not (hour == 0):
+            if hour < 10:
+                print("0" + str(hour) + ':', end='')
+            else:
+                print(str(hour) + ':', end='')
+
+        if not (minute == 0 and hour == 0):
+            if minute < 10:
+                print("0" + str(minute) + ':', end='')
+            else:
+                print(str(minute) + ':', end='')
+
+        if not (second == 0 and minute == 0 and hour == 0):
+            if second < 10:
+                print("0" + str(second), end='')
+            else:
+                print(second, end='')
+
+
     def generate(videoPath, nPoints: int = 1000, outputDirectoryPath: str = None, outputFrameRate: int = None, frameCounting = True):
         """
         ### Parameters
@@ -340,13 +368,23 @@ class VoronoiVideo():
 
         # conveting all frames to voronoi
         listLong = len(listOfFrames)
+        startTime = time.time()
         for i, frame in enumerate(listOfFrames):
             if frameCounting:
+                elapsedTime = time.time() - startTime
+                elapsedTime = elapsedTime * (listLong - (i+1))
+
                 print("Frame: " + str(i+1) + '/' + str(listLong), end=' | ')
-                print(str(round(((i+1) / listLong * 100), 1)) + '%', end='\r')
+                print(str(round(((i+1) / listLong * 100), 1)) + '%', end='')
+
                 if i+1 == listLong:
                     print(" " * (17 + 2 * len(str(listLong))), end='\r')
                     print("Done")
+                else:
+                    VoronoiVideo.__printEstimatedTime(elapsedTime)
+                    print('', end='\r')
+                    
+                startTime = time.time()
             listOfVoronoiFrames.append(VoronoiImage.generate(frame, nPoints))
 
         # deleting unnecessary list

@@ -18,6 +18,12 @@ and another set parameters:
 
 `points`: Array of points with shape (numberOfPoints, 2). Correct data types is list, tuple or np.ndarry. Or int value with number of random points.
 
+`saveInDirectory`: Value that decides if you want to save this photo. Only boolean values.
+
+`outputDirectoryPath`: Path to the folder where you want to save the file. Only string values.
+
+`bluringKernelSize`: Size of kernel (length of filter side) using to bluring image before generating voronoi diagram. Only positive odd int values greater than 1 and smaller than smaller side of image, or None value if you don't wont to use bluring, or 'auto' value if you want to automaticly set the kernelSize.
+
 
 ### Generating Voronoi Video
 <span style="color:#9579c0">from</span> <span style="color:#4ec9b0">voronoiVideo</span> <span style="color:#9579c0">import</span> <span style="color:#4ec9b0">VoronoiVideo</span>
@@ -33,6 +39,8 @@ and another set parameters:
 `outputFrameRate`: Frame per seconds (FPS) in output video. Only int or float values.
 
 `frameCounting`: Displaying the number of frames in the console. Only bool values.
+
+`bluringKernelSize`: Size of kernel (length of filter side) using to bluring all of frames before generating voronoi diagram. Only positive odd int values greater than 1 and smaller than smaller side of image, or None value if you don't wont to use bluring, or 'auto' value if you want to automaticly set the kernelSize.
 
 
 ### Results

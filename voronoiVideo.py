@@ -43,7 +43,45 @@ class VoronoiImage():
         return inside
 
 
-    def generate(image, points, saveInDirectory: bool = False, outputDirectoryPath: str = None) -> np.ndarray:
+    def __checkBluringKernelSizeCorrectness(bluringKernelSize, imageSize):
+        allCorrect = True
+
+        if bluringKernelSize == None:
+            pass
+        elif isinstance(bluringKernelSize, int):
+            if bluringKernelSize < 3:
+                allCorrect = False
+                print("Invorrect bluringKernelSize value. Value must be positive odd int number greater than 1")
+            elif bluringKernelSize % 2 == 0:
+                allCorrect = False
+                print("Invorrect bluringKernelSize value. Value must be odd.")
+            elif bluringKernelSize >= min(imageSize):
+                allCorrect = False
+                print("Incorrect bluringKernelSize value. Value must be smaller than smaller side of image.")
+        elif isinstance(bluringKernelSize, str):
+            if bluringKernelSize.lower() == 'auto':
+                kernalSize = min(imageSize) // 200 # 200 is some value regulated kernelSize depends of image shape
+                if kernalSize % 2 == 0:
+                    kernalSize += 1
+            else:
+                allCorrect = False
+                print("""Incorrect bluringKernelSize data type. Only positive
+                         odd int values greater than 1 and smaller than smaller
+                         side of image, or None value if you don't wont to use
+                         bluring, or 'auto' value if you want to automaticly
+                         set the kernelSize.""")
+        else:
+            allCorrect = False
+            print("""Incorrect bluringKernelSize data type. Only positive
+                     odd int values greater than 1 and smaller than smaller
+                     side of image, or None value if you don't wont to use
+                     bluring, or 'auto' value if you want to automaticly
+                     set the kernelSize.""")
+
+        return allCorrect
+
+
+    def generate(image, points, saveInDirectory: bool = False, outputDirectoryPath: str = None, bluringKernelSize = 'auto') -> np.ndarray:
         """
         ### Parameters
         `image`: Array of image. Only list, tuple np.ndarray or string with path to image. Shape of image 
@@ -52,6 +90,14 @@ class VoronoiImage():
         `points`: Array of points with shape (numberOfPoints, 2). Correct data types is list, tuple or 
         np.ndarry. Or int value with number of random points.
 
+        `saveInDirectory`: Value that decides if you want to save this photo. Only boolean values.
+
+        `outputDirectoryPath`: Path to the folder where you want to save the file. Only string values.
+
+        `bluringKernelSize`: Size of kernel (length of filter side) using to bluring image before generating 
+        voronoi diagram. Only positive odd int values greater than 1 and smaller than smaller side of image, 
+        or None value if you don't wont to use bluring, or 'auto' value if you want to automaticly set the 
+        kernelSize.
 
         ### Returns
         out: np.ndarray
@@ -63,6 +109,7 @@ class VoronoiImage():
         allCorrect = True
         fileName = ''
         pointsLen = 1
+        kernalSize = 3
 
         # image
         if isinstance(image, str):
@@ -73,13 +120,11 @@ class VoronoiImage():
                 allCorrect = False
                 print('This file does not exist.')
                 print(e)
-
         elif isinstance(image, np.ndarray):
             if not (len(image.shape) == 2 or len(image.shape) == 3):
                 allCorrect = False
                 print("""Incorrect image shape. Correct shape is (xSize, ySize, channels)
                         or (xSize, ySize) in one channel case.""")
-
         elif isinstance(image, list) or isinstance(image, tuple):
             image = np.array(image)
             if not (len(image.shape) == 2 or len(image.shape) == 3):
@@ -91,33 +136,34 @@ class VoronoiImage():
             print("Incorrect image data type. Only list, tuple, np.ndarray or string with path do image.")
 
         # points
-        if isinstance(points, list) or isinstance(points, tuple) or isinstance(points, np.ndarray):
-            if not isinstance(points, np.ndarray):
-                points = np.array(points)
+        if allCorrect:
+            if isinstance(points, list) or isinstance(points, tuple) or isinstance(points, np.ndarray):
+                if not isinstance(points, np.ndarray):
+                    points = np.array(points)
 
-            if not (len(points.shape) == 2 and points.shape[1] == 2):
-                allCorrect = False
-                print("Incorrect points shape. Correct shape is (nPoints, 2). second")
-        elif isinstance(points, int):
-            if points > 1:
-                points = np.random.random((points, 2))
+                if not (len(points.shape) == 2 and points.shape[1] == 2):
+                    allCorrect = False
+                    print("Incorrect points shape. Correct shape is (nPoints, 2). second")
+            elif isinstance(points, int):
+                if points > 1:
+                    points = np.random.random((points, 2))
+                else:
+                    allCorrect = False
+                    print("Incorrect nPoints value. nPoints must be greater or equal than 2.")
             else:
                 allCorrect = False
-                print("Incorrect nPoints value. nPoints must be greater or equal than 2.")
-
-        else:
-            allCorrect = False
-            print("""Incorrect points data type. Only list, 
-                     tuple or np.array with points coodinations 
-                     or int value with number of random points.""")
+                print("""Incorrect points data type. Only list, 
+                        tuple or np.array with points coodinations 
+                        or int value with number of random points.""")
 
         if allCorrect:
             pointsLen = len(points)
 
         # saveInDirectory
-        if not isinstance(saveInDirectory, bool):
-            allCorrect = False
-            print("Incorrect saveInDirectory value. Only bool.")
+        if allCorrect:
+            if not isinstance(saveInDirectory, bool):
+                allCorrect = False
+                print("Incorrect saveInDirectory value. Only bool.")
 
         # outputDirectory
         if allCorrect:
@@ -130,6 +176,10 @@ class VoronoiImage():
             else:
                 allCorrect = False
                 print("Incorrect outputDirectoryPath data type. Only string with path to directory.")
+
+        # bluringKernelSize
+        if allCorrect:
+            allCorrect = VoronoiImage.__checkBluringKernelSizeCorrectness(bluringKernelSize, image.shape)
 
         if allCorrect:
             # Params
@@ -166,6 +216,10 @@ class VoronoiImage():
             ver[0] = ver[0] * (size[0] - 1)
             ver[1] = ver[1] * (size[1] - 1)
             ver = ver.transpose()
+
+            # Blurring
+            kernel = np.ones((kernalSize, kernalSize),np.float32) / (kernalSize**2)
+            image = cv.filter2D(image, -1, kernel)
 
             # Colors
             colors = []
@@ -268,7 +322,7 @@ class VoronoiVideo():
             print(second, end='')
 
 
-    def generate(videoPath, nPoints: int = 1000, outputDirectoryPath: str = None, outputFrameRate: int = None, frameCounting = True):
+    def generate(videoPath, nPoints: int = 1000, outputDirectoryPath: str = None, outputFrameRate: int = None, frameCounting = True, bluringKernelSize = 'auto'):
         """
         ### Parameters
         `videoPath`: Path to video. Only string values.
@@ -283,6 +337,11 @@ class VoronoiVideo():
         `outputFrameRate`: Frame per seconds (FPS) in output video. Only int or float values.
 
         `frameCounting`: Displaying the number of frames in the console. Only bool values.
+
+        `bluringKernelSize`: Size of kernel (length of filter side) using to bluring all of frames before 
+        generating voronoi diagram. Only positive odd int values greater than 1 and smaller than smaller 
+        side of image, or None value if you don't wont to use bluring, or 'auto' value if you want to 
+        automaticly set the kernelSize.
 
         ### Returns
         out: video in .mp4 data type
@@ -332,90 +391,97 @@ class VoronoiVideo():
             else:
                 allCorrect = False
                 print("Incorrect outputFps value. Only positive int or float values.")
-        
-
-        # GENERATING
-        listOfFrames = []
-        listOfVoronoiFrames = []
 
         # importing video
-        capture = cv.VideoCapture(videoPath)
+        if allCorrect:
+            capture = cv.VideoCapture(videoPath)
 
-        # converter calculeting
-        fps = int(round(capture.get(cv.CAP_PROP_FPS), 0))
-        if outputFrameRate is None:
-            outputFrameRate = fps
-        converter = max(fps / outputFrameRate, 1)
+        # bluringKernelSize
+        if allCorrect:
+            width = capture.get(cv.CAP_PROP_FRAME_WIDTH)
+            height = capture.get(cv.CAP_PROP_FRAME_HEIGHT)
+            allCorrect = VoronoiImage.__checkBluringKernelSizeCorrectness(bluringKernelSize, [width, height])
 
-        # reading frames
-        index = 0
-        while True:
-            isTrue, frame = capture.read()
-            if not isTrue:
-                break
-            if index % converter < 1:
-                listOfFrames.append(frame)
-            index += 1
+        # GENERATING
+        if allCorrect:
+            listOfFrames = []
+            listOfVoronoiFrames = []
 
-        # release memory space
-        capture.release()
+            # converter calculeting
+            fps = int(round(capture.get(cv.CAP_PROP_FPS), 0))
+            if outputFrameRate is None:
+                outputFrameRate = fps
+            converter = max(fps / outputFrameRate, 1)
 
-        # conveting all frames to voronoi
-        listLong = len(listOfFrames)
-        startTime = time.time()
-        startFrameTime = time.time()
-        for i, frame in enumerate(listOfFrames):
-            if frameCounting:
-                print("Frame: " + str(i+1) + '/' + str(listLong), end=' | ')
-                print(str(round(((i+1) / listLong * 100), 1)) + '%', end='')
+            # reading frames
+            index = 0
+            while True:
+                isTrue, frame = capture.read()
+                if not isTrue:
+                    break
+                if index % converter < 1:
+                    listOfFrames.append(frame)
+                index += 1
 
-                elapsedTime = time.time() - startFrameTime
-                elapsedTime = elapsedTime * (listLong - (i+1))
+            # release memory space
+            capture.release()
 
-                if i+1 == listLong:
-                    print('', end='\r')
-                    print(" " * 75, end='\r')
-                    print("Done in ", end='')
-                    VoronoiVideo.__printEstimatedTime(time.time() - startTime, withStartTime=True)
-                    print()
+            # conveting all frames to voronoi
+            listLong = len(listOfFrames)
+            startTime = time.time()
+            startFrameTime = time.time()
+            for i, frame in enumerate(listOfFrames):
+                if frameCounting:
+                    print("Frame: " + str(i+1) + '/' + str(listLong), end=' | ')
+                    print(str(round(((i+1) / listLong * 100), 1)) + '%', end='')
+
+                    elapsedTime = time.time() - startFrameTime
+                    elapsedTime = elapsedTime * (listLong - (i+1))
+
+                    if i+1 == listLong:
+                        print('', end='\r')
+                        print(" " * 75, end='\r')
+                        print("Done in ", end='')
+                        VoronoiVideo.__printEstimatedTime(time.time() - startTime, withStartTime=True)
+                        print()
+                    else:
+                        VoronoiVideo.__printEstimatedTime(elapsedTime)
+                        print('', end='\r')
+                        
+                    startFrameTime = time.time()
+
+                listOfVoronoiFrames.append(VoronoiImage.generate(frame, nPoints, bluringKernelSize=bluringKernelSize))
+
+            # deleting unnecessary list
+            del(listOfFrames)
+            
+            # generating file name
+            outputFileName = outputDirectoryPath
+            if outputFileName != '':
+                if not (outputFileName[-1] == '/' or outputFileName[-1] == '\\'):
+                    outputFileName += '/'
+            outputFileName += os.path.basename(videoPath).split('.')[0]
+            outputFileName += '_' + str(outputFrameRate) + "fps_" + str(nPoints) + "nPts"
+
+            # checing if file with outputFileName exist
+            iter = -1
+            while True:
+                iter += 1
+                if iter == 0:
+                    if not os.path.isfile(outputFileName + ".mp4"):
+                        outputFileName += ".mp4"
+                        break
                 else:
-                    VoronoiVideo.__printEstimatedTime(elapsedTime)
-                    print('', end='\r')
-                    
-                startFrameTime = time.time()
+                    if not os.path.isfile(outputFileName + "(" + str(iter+1) + ")" + ".mp4"):
+                        outputFileName += "({}).mp4".format(str(int(iter+1)))
+                        break
 
-            listOfVoronoiFrames.append(VoronoiImage.generate(frame, nPoints))
+            # video params
+            codec = cv.VideoWriter_fourcc('m', 'p', '4', 'v')
+            resolution = (listOfVoronoiFrames[0].shape[1], listOfVoronoiFrames[0].shape[0])
 
-        # deleting unnecessary list
-        del(listOfFrames)
-        
-        # generating file name
-        outputFileName = outputDirectoryPath
-        if outputFileName != '':
-            if not (outputFileName[-1] == '/' or outputFileName[-1] == '\\'):
-                outputFileName += '/'
-        outputFileName += os.path.basename(videoPath).split('.')[0]
-        outputFileName += '_' + str(outputFrameRate) + "fps_" + str(nPoints) + "nPts"
-
-        # checing if file with outputFileName exist
-        iter = -1
-        while True:
-            iter += 1
-            if iter == 0:
-                if not os.path.isfile(outputFileName + ".mp4"):
-                    outputFileName += ".mp4"
-                    break
-            else:
-                if not os.path.isfile(outputFileName + "(" + str(iter+1) + ")" + ".mp4"):
-                    outputFileName += "({}).mp4".format(str(int(iter+1)))
-                    break
-
-        # video params
-        codec = cv.VideoWriter_fourcc('m', 'p', '4', 'v')
-        resolution = (listOfVoronoiFrames[0].shape[1], listOfVoronoiFrames[0].shape[0])
-
-        # exporting video
-        videoOutput = cv.VideoWriter(outputFileName, codec, outputFrameRate, resolution)
-        for frame in listOfVoronoiFrames:
-            videoOutput.write(frame)
-        videoOutput.release()
+            # exporting video
+            videoOutput = cv.VideoWriter(outputFileName, codec, outputFrameRate, resolution)
+            for frame in listOfVoronoiFrames:
+                videoOutput.write(frame)
+            videoOutput.release()

@@ -22,28 +22,7 @@ class VoronoiImage():
         return points
 
 
-    def __checkPointInPolygon(x: int, y: int, poly: list) -> bool:
-        n = len(poly)
-        inside = False
-        p2x = 0.0
-        p2y = 0.0
-        a = 0.0
-        p1x,p1y = poly[0]
-        for i in range(n+1):
-            p2x,p2y = poly[i % n]
-            if y > min(p1y,p2y):
-                if y <= max(p1y,p2y):
-                    if x <= max(p1x,p2x):
-                        if p1y != p2y:
-                            a = (y-p1y)*(p2x-p1x)/(p2y-p1y)+p1x
-                        if p1x == p2x or x <= a:
-                            inside = not inside
-            p1x,p1y = p2x,p2y
-
-        return inside
-
-
-    def __checkBluringKernelSizeCorrectness(bluringKernelSize, imageSize):
+    def checkBluringKernelSizeCorrectness(bluringKernelSize, imageSize):
         allCorrect = True
 
         if bluringKernelSize == None:
@@ -60,25 +39,17 @@ class VoronoiImage():
                 print("Incorrect bluringKernelSize value. Value must be smaller than smaller side of image.")
         elif isinstance(bluringKernelSize, str):
             if bluringKernelSize.lower() == 'auto':
-                kernalSize = min(imageSize) // 200 # 200 is some value regulated kernelSize depends of image shape
-                if kernalSize % 2 == 0:
-                    kernalSize += 1
+                bluringKernelSize = int(min(imageSize) // 200) # 200 is some value regulated kernelSize depends of image shape
+                if bluringKernelSize % 2 == 0:
+                    bluringKernelSize += 1
             else:
                 allCorrect = False
-                print("""Incorrect bluringKernelSize data type. Only positive
-                         odd int values greater than 1 and smaller than smaller
-                         side of image, or None value if you don't wont to use
-                         bluring, or 'auto' value if you want to automaticly
-                         set the kernelSize.""")
+                print("""Incorrect bluringKernelSize data type. Only positive odd int values greater than 1 and smaller than smaller side of image, or None value if you don't wont to use bluring, or 'auto' value if you want to automaticly set the kernelSize.""")
         else:
             allCorrect = False
-            print("""Incorrect bluringKernelSize data type. Only positive
-                     odd int values greater than 1 and smaller than smaller
-                     side of image, or None value if you don't wont to use
-                     bluring, or 'auto' value if you want to automaticly
-                     set the kernelSize.""")
+            print("""Incorrect bluringKernelSize data type. Only positive odd int values greater than 1 and smaller than smaller side of image, or None value if you don't wont to use bluring, or 'auto' value if you want to automaticly set the kernelSize.""")
 
-        return allCorrect
+        return allCorrect, bluringKernelSize
 
 
     def generate(image, points, saveInDirectory: bool = False, outputDirectoryPath: str = None, bluringKernelSize = 'auto') -> np.ndarray:
@@ -109,7 +80,7 @@ class VoronoiImage():
         allCorrect = True
         fileName = ''
         pointsLen = 1
-        kernalSize = 3
+        kernelSize = 3
 
         # image
         if isinstance(image, str):
@@ -123,14 +94,12 @@ class VoronoiImage():
         elif isinstance(image, np.ndarray):
             if not (len(image.shape) == 2 or len(image.shape) == 3):
                 allCorrect = False
-                print("""Incorrect image shape. Correct shape is (xSize, ySize, channels)
-                        or (xSize, ySize) in one channel case.""")
+                print("""Incorrect image shape. Correct shape is (xSize, ySize, channels) or (xSize, ySize) in one channel case.""")
         elif isinstance(image, list) or isinstance(image, tuple):
             image = np.array(image)
             if not (len(image.shape) == 2 or len(image.shape) == 3):
                 allCorrect = False
-                print("""Incorrect image shape. Correct shape is (xSize, ySize, channels)
-                        or (xSize, ySize) in one channel case.""")
+                print("""Incorrect image shape. Correct shape is (xSize, ySize, channels) or (xSize, ySize) in one channel case.""")
         else:
             allCorrect = False
             print("Incorrect image data type. Only list, tuple, np.ndarray or string with path do image.")
@@ -152,9 +121,7 @@ class VoronoiImage():
                     print("Incorrect nPoints value. nPoints must be greater or equal than 2.")
             else:
                 allCorrect = False
-                print("""Incorrect points data type. Only list, 
-                        tuple or np.array with points coodinations 
-                        or int value with number of random points.""")
+                print("""Incorrect points data type. Only list, tuple or np.array with points coodinations or int value with number of random points.""")
 
         if allCorrect:
             pointsLen = len(points)
@@ -179,11 +146,11 @@ class VoronoiImage():
 
         # bluringKernelSize
         if allCorrect:
-            allCorrect = VoronoiImage.__checkBluringKernelSizeCorrectness(bluringKernelSize, image.shape)
+            allCorrect, bluringKernelSize = VoronoiImage.checkBluringKernelSizeCorrectness(bluringKernelSize, [image.shape[0], image.shape[1]])
 
         if allCorrect:
             # Params
-            image = np.array(image)
+            image = np.array(image).astype('uint8')
             size = (image.shape[0], image.shape[1])
             nPoints = len(points)
 
@@ -197,12 +164,16 @@ class VoronoiImage():
             vor = Voronoi(points)
 
             # Points and regions validation
-            ptn = vor.points[0:-3]
-            reg = []
+            points = vor.points[0:-3]
+            pointRegions = vor.point_region[0:-3]
+            regions = vor.regions
 
-            for region in vor.regions[1:]:
-                if (not -1 in region):
-                    reg.append(region)
+            reg = []
+            ptn = []
+            for i in range(len(points)):
+                if not -1 in regions[pointRegions[i]]:
+                    ptn.append(points[i])
+                    reg.append(regions[pointRegions[i]])
 
             # Points scaling
             ptn = np.array(ptn).transpose()
@@ -218,35 +189,31 @@ class VoronoiImage():
             ver = ver.transpose()
 
             # Blurring
-            kernel = np.ones((kernalSize, kernalSize),np.float32) / (kernalSize**2)
-            image = cv.filter2D(image, -1, kernel)
+            if not bluringKernelSize == None:
+                kernel = np.ones((bluringKernelSize, bluringKernelSize),np.float32) / (bluringKernelSize**2)
+                image = cv.filter2D(image, -1, kernel)
 
             # Colors
             colors = []
-            for point in ptn:
-                colors.append(tuple(image[point[0]][point[1]]))
+            if isinstance(image[0][0], np.ndarray):
+                for point in ptn:
+                    colors.append((
+                        int(image[point[0]][point[1]][0]), 
+                        int(image[point[0]][point[1]][1]), 
+                        int(image[point[0]][point[1]][2])
+                    ))
+            elif isinstance(image[0][0], np.uint8):
+                for point in ptn:
+                    colors.append(int(image[point[0]][point[1]]))
 
             # Drawing
             outputImage = np.full((size[1], size[0], 3), 255)
 
-            for i, region in enumerate(reg):
+            for region, color in zip(reg, colors):
+                # seting all polygon tops points
                 polygonPoints = []
                 for value in region:
                     polygonPoints.append(tuple(ver[value]))
-
-                for i in range(len(ptn)):
-                    # 65535 because points data type is uint16
-                    if not ptn[i][0] == 65535:
-                        if VoronoiImage.__checkPointInPolygon(ptn[i][0], ptn[i][1], polygonPoints):
-                            ptn[i][0] = 65535
-                            break
-
-                # color setting
-                color = (0, 0, 0)
-                if isinstance(colors[i], tuple):
-                    color = (int(colors[i][2]), int(colors[i][1]), int(colors[i][0]))
-                if isinstance(colors[i], int):
-                    color = (int(colors[i]), int(colors[i]), int(colors[i]))
 
                 cv.fillPoly(outputImage, [np.int32(polygonPoints)], color)
 
@@ -270,6 +237,7 @@ class VoronoiImage():
             outputImage = np.fliplr(outputImage)
             outputImage = outputImage.astype('uint8')
 
+            # Image saving
             if saveInDirectory:
                 # generating file name
                 outputFileName = outputDirectoryPath
@@ -292,10 +260,9 @@ class VoronoiImage():
                             outputFileName += "({}).png".format(str(int(iter+1)))
                             break
                 
-                saveImage = cv.cvtColor(outputImage, cv.COLOR_RGB2BGR)
-                cv.imwrite(outputFileName, saveImage)
+                cv.imwrite(outputFileName, outputImage)
 
-            return outputImage
+            return cv.cvtColor(outputImage, cv.COLOR_BGR2RGB)
 
 
 class VoronoiVideo():
@@ -400,7 +367,7 @@ class VoronoiVideo():
         if allCorrect:
             width = capture.get(cv.CAP_PROP_FRAME_WIDTH)
             height = capture.get(cv.CAP_PROP_FRAME_HEIGHT)
-            allCorrect = VoronoiImage.__checkBluringKernelSizeCorrectness(bluringKernelSize, [width, height])
+            allCorrect, bluringKernelSize = VoronoiImage.checkBluringKernelSizeCorrectness(bluringKernelSize, [width, height])
 
         # GENERATING
         if allCorrect:

@@ -24,6 +24,8 @@ and another set parameters:
 
 `bluringKernelSize`: Size of kernel (length of filter side) using to bluring image before generating voronoi diagram. Only positive odd int values greater than 1 and smaller than smaller side of image, or None value if you don't wont to use bluring, or 'auto' value if you want to automaticly set the kernelSize.
 
+`numberOfLloydsIters`: Number of iterations in Lloyds Algorythm. Recommended value is max(20, Npoints/50), but if you set numberOfLloydsIters to "auto" then this value will set automatically. Only int values.
+
 
 ### Generating Voronoi Video
 <span style="color:#9579c0">from</span> <span style="color:#4ec9b0">voronoiVideo</span> <span style="color:#9579c0">import</span> <span style="color:#4ec9b0">VoronoiVideo</span>
@@ -41,6 +43,8 @@ and another set parameters:
 `frameCounting`: Displaying the number of frames in the console. Only bool values.
 
 `bluringKernelSize`: Size of kernel (length of filter side) using to bluring all of frames before generating voronoi diagram. Only positive odd int values greater than 1 and smaller than smaller side of image, or None value if you don't wont to use bluring, or 'auto' value if you want to automaticly set the kernelSize.
+
+`numberOfLloydsIters`: Number of iterations in Lloyds Algorythm. Recommended value is max(20, Npoints/50), but if you set numberOfLloydsIters to "auto" then this value will set automatically. Only int values.
 
 
 ### Results

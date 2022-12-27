@@ -51,8 +51,62 @@ class VoronoiImage():
 
         return allCorrect, bluringKernelSize
 
+    def __polygonsNormalization(polygons, size):
+        for poly in range(len(polygons)):
+            for point in range(len(polygons[poly])):
+                if polygons[poly][point][0] < 0:
+                    polygons[poly][point][0] = 0
+                elif polygons[poly][point][0] > size[0]:
+                    polygons[poly][point][0] = size[0]
 
-    def generate(image, points, saveInDirectory: bool = False, outputDirectoryPath: str = None, bluringKernelSize = 'auto') -> np.ndarray:
+                if polygons[poly][point][1] < 0:
+                    polygons[poly][point][1] = 0
+                elif polygons[poly][point][1] > size[1]:
+                    polygons[poly][point][1] = size[1]
+        
+        return polygons
+
+    def __lloydsAlgorythm(points: list, iters: int = 10) -> np.ndarray:
+        for i in range(iters):
+            # Min max scaling and adding outside triangle points
+            points = VoronoiImage.__minMax(np.array(points))
+            points = np.append(points, [[0, 100]], axis=0)
+            points = np.append(points, [[-100, -100]], axis=0)
+            points = np.append(points, [[100, -100]], axis=0)
+
+            # Generating voronoi mesh
+            vor = Voronoi(points)
+
+            # deleting empty or containing -1 value regions
+            reg = []
+            for region in vor.regions:
+                if not (-1 in region or region == []):
+                    reg.append(region)
+            regions = reg
+
+            # Setting polygon points
+            reg = []
+            for region in regions:
+                regTemp = []
+                for value in region:
+                    regTemp.append(list(vor.vertices[value]))
+                reg.append(regTemp)
+            regions = reg
+
+            # polygons normalization
+            regions = VoronoiImage.__polygonsNormalization(regions, (1, 1))
+
+            # calculating new points
+            points = []
+            for region in regions:
+                region = np.array(region).transpose()
+                points.append([np.mean(region[0]), np.mean(region[1])])
+
+        return np.array(points)
+            
+
+
+    def generate(image, points, saveInDirectory: bool = False, outputDirectoryPath: str = None, bluringKernelSize = 'auto', numberOfLloydsIters: int = None) -> np.ndarray:
         """
         ### Parameters
         `image`: Array of image. Only list, tuple np.ndarray or string with path to image. Shape of image 
@@ -70,6 +124,9 @@ class VoronoiImage():
         or None value if you don't wont to use bluring, or 'auto' value if you want to automaticly set the 
         kernelSize.
 
+        `numberOfLloydsIters`: Number of iterations in Lloyds Algorythm. Recommended value is max(20, Npoints/50),
+        but if you set numberOfLloydsIters to "auto" then this value will set automatically. Only int values.
+
         ### Returns
         out: np.ndarray
 
@@ -80,7 +137,6 @@ class VoronoiImage():
         allCorrect = True
         fileName = ''
         pointsLen = 1
-        kernelSize = 3
 
         # image
         if isinstance(image, str):
@@ -148,11 +204,30 @@ class VoronoiImage():
         if allCorrect:
             allCorrect, bluringKernelSize = VoronoiImage.checkBluringKernelSizeCorrectness(bluringKernelSize, [image.shape[0], image.shape[1]])
 
+        # numberOfLloydsIters
+        if allCorrect:
+            if isinstance(numberOfLloydsIters, int):
+                if numberOfLloydsIters <= 0:
+                    allCorrect = False
+                    print("numberOfLloydsIters value must be greater than 0.")
+                elif numberOfLloydsIters > 50:
+                    print("Warning. numberOfLloydsIters value is probably too big. A large value means high processing power and a longer waiting time. Recommended max value is 20")
+            elif numberOfLloydsIters == 'auto':
+                numberOfLloydsIters = max(20, int(len(points)/50))
+            elif numberOfLloydsIters == None:
+                pass
+            else:
+                allCorrect = False
+                print("Incorrect numberOfLloydsIters data type. Only int or 'auto' values.")
+
         if allCorrect:
             # Params
             image = np.array(image).astype('uint8')
             size = (image.shape[0], image.shape[1])
-            nPoints = len(points)
+
+            # Lloyds Algorythm
+            if numberOfLloydsIters != None:
+                points = VoronoiImage.__lloydsAlgorythm(points, numberOfLloydsIters)
 
             # Min max scaling and adding outside triangle points
             points = VoronoiImage.__minMax(points)
@@ -289,7 +364,7 @@ class VoronoiVideo():
             print(second, end='')
 
 
-    def generate(videoPath, nPoints: int = 1000, outputDirectoryPath: str = None, outputFrameRate: int = None, frameCounting = True, bluringKernelSize = 'auto'):
+    def generate(videoPath, nPoints: int = 1000, outputDirectoryPath: str = None, outputFrameRate: int = None, frameCounting = True, bluringKernelSize = 'auto', numberOfLloydsIters: int = None):
         """
         ### Parameters
         `videoPath`: Path to video. Only string values.
@@ -309,6 +384,9 @@ class VoronoiVideo():
         generating voronoi diagram. Only positive odd int values greater than 1 and smaller than smaller 
         side of image, or None value if you don't wont to use bluring, or 'auto' value if you want to 
         automaticly set the kernelSize.
+
+        `numberOfLloydsIters`: Number of iterations in Lloyds Algorythm. Recommended value is max(20, Npoints/50),
+        but if you set numberOfLloydsIters to "auto" then this value will set automatically. Only int values.
 
         ### Returns
         out: video in .mp4 data type
@@ -417,7 +495,7 @@ class VoronoiVideo():
                         
                     startFrameTime = time.time()
 
-                listOfVoronoiFrames.append(VoronoiImage.generate(frame, nPoints, bluringKernelSize=bluringKernelSize))
+                listOfVoronoiFrames.append(VoronoiImage.generate(frame, nPoints, bluringKernelSize=bluringKernelSize, numberOfLloydsIters=numberOfLloydsIters))
 
             # deleting unnecessary list
             del(listOfFrames)

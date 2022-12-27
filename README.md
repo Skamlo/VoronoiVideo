@@ -48,9 +48,9 @@ In result, you get these types of images or videos in the same style:
 
 <!-- image source: https://commons.wikimedia.org/wiki/File:Girl_with_a_Pearl_Earring.jpg -->
 <p float="left">
-  <img src="img/The_Girl_With_The_Pearl_Earring.png" width="33%" />
-  <img src="img/The_Girl_With_The_Pearl_Earring_5000nPts.png" width="33%" />
-  <img src="img/The_Girl_With_The_Pearl_Earring_Lloyds_Algorythm_5000nPts.png" width="33%" />
+  <img src="img/The_Girl_With_The_Pearl_Earring.png" width="32%" />
+  <img src="img/The_Girl_With_The_Pearl_Earring_5000nPts.png" width="32%" />
+  <img src="img/The_Girl_With_The_Pearl_Earring_Lloyds_Algorythm_5000nPts.png" width="32%" />
 </p>
 
 

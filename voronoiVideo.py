@@ -349,7 +349,7 @@ class VoronoiVideo():
         second = int(round(time % 60, 0))
 
         if not withStartTime:
-            print(" | Estiamted time:", end=' ')
+            print(" | Estimated time:", end=' ')
 
         print(str(hour) + ':', end='')
 

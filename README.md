@@ -9,7 +9,8 @@
 ### Setup
 If you want to run this module you have to install three packages - `numpy`, `cv2` and `scipy`. You can do it with pip method by typing `pip install numpy cv2 scipy` cammand in system console.
 
-### Generating Voronoi Image
+
+## Generating Voronoi Image
 <span style="color:#9579c0">from</span> <span style="color:#4ec9b0">voronoiVideo</span> <span style="color:#9579c0">import</span> <span style="color:#4ec9b0">VoronoiImage</span>
 
 and another set parameters:
@@ -27,7 +28,17 @@ and another set parameters:
 `numberOfLloydsIters`: Number of iterations in Lloyds Algorythm. Recommended value is max(20, Npoints/50), but if you set numberOfLloydsIters to "auto" then this value will set automatically. Only int values.
 
 
-### Generating Voronoi Video
+### Results
+
+<!-- image source: https://commons.wikimedia.org/wiki/File:Girl_with_a_Pearl_Earring.jpg -->
+<p float="left">
+  <img src="img/The_Girl_With_The_Pearl_Earring.png" width="32%" />
+  <img src="img/The_Girl_With_The_Pearl_Earring_5000nPts.png" width="32%" />
+  <img src="img/The_Girl_With_The_Pearl_Earring_Lloyds_Algorythm_5000nPts.png" width="32%" />
+</p>
+
+
+## Generating Voronoi Video
 <span style="color:#9579c0">from</span> <span style="color:#4ec9b0">voronoiVideo</span> <span style="color:#9579c0">import</span> <span style="color:#4ec9b0">VoronoiVideo</span>
 
 and another set parameters:
@@ -48,13 +59,9 @@ and another set parameters:
 
 
 ### Results
-In result, you get these types of images or videos in the same style:
 
-<!-- image source: https://commons.wikimedia.org/wiki/File:Girl_with_a_Pearl_Earring.jpg -->
 <p float="left">
-  <img src="img/The_Girl_With_The_Pearl_Earring.png" width="32%" />
-  <img src="img/The_Girl_With_The_Pearl_Earring_5000nPts.png" width="32%" />
-  <img src="img/The_Girl_With_The_Pearl_Earring_Lloyds_Algorythm_5000nPts.png" width="32%" />
+  <img src="img/blade_runner_Lloyd.gif" width="98%" />
 </p>
 
 

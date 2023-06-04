@@ -449,57 +449,12 @@ class VoronoiVideo():
 
         # GENERATING
         if allCorrect:
-            listOfFrames = []
-            listOfVoronoiFrames = []
-
             # converter calculeting
             fps = int(round(capture.get(cv.CAP_PROP_FPS), 0))
             if outputFrameRate is None:
                 outputFrameRate = fps
             converter = max(fps / outputFrameRate, 1)
 
-            # reading frames
-            index = 0
-            while True:
-                isTrue, frame = capture.read()
-                if not isTrue:
-                    break
-                if index % converter < 1:
-                    listOfFrames.append(frame)
-                index += 1
-
-            # release memory space
-            capture.release()
-
-            # conveting all frames to voronoi
-            listLong = len(listOfFrames)
-            startTime = time.time()
-            startFrameTime = time.time()
-            for i, frame in enumerate(listOfFrames):
-                if frameCounting:
-                    print("Frame: " + str(i+1) + '/' + str(listLong), end=' | ')
-                    print(str(round(((i+1) / listLong * 100), 1)) + '%', end='')
-
-                    elapsedTime = time.time() - startFrameTime
-                    elapsedTime = elapsedTime * (listLong - (i+1))
-
-                    if i+1 == listLong:
-                        print('', end='\r')
-                        print(" " * 75, end='\r')
-                        print("Done in ", end='')
-                        VoronoiVideo.__printEstimatedTime(time.time() - startTime, withStartTime=True)
-                        print()
-                    else:
-                        VoronoiVideo.__printEstimatedTime(elapsedTime)
-                        print('', end='\r')
-                        
-                    startFrameTime = time.time()
-
-                listOfVoronoiFrames.append(VoronoiImage.generate(frame, nPoints, bluringKernelSize=bluringKernelSize, numberOfLloydsIters=numberOfLloydsIters))
-
-            # deleting unnecessary list
-            del(listOfFrames)
-            
             # generating file name
             outputFileName = outputDirectoryPath
             if outputFileName != '':
@@ -520,13 +475,61 @@ class VoronoiVideo():
                     if not os.path.isfile(outputFileName + "(" + str(iter+1) + ")" + ".mp4"):
                         outputFileName += "({}).mp4".format(str(int(iter+1)))
                         break
-
+            
             # video params
             codec = cv.VideoWriter_fourcc('m', 'p', '4', 'v')
-            resolution = (listOfVoronoiFrames[0].shape[1], listOfVoronoiFrames[0].shape[0])
-
-            # exporting video
+            resolution = (int(capture.get(3)), int(capture.get(4)))
+            
+            # video output
             videoOutput = cv.VideoWriter(outputFileName, codec, outputFrameRate, resolution)
-            for frame in listOfVoronoiFrames:
+
+            # number of frames
+            nFramesRaw = int(capture.get(cv.CAP_PROP_FRAME_COUNT))
+            nFrames = 0
+            for i in range(nFramesRaw):
+                if i % converter < 1:
+                    nFrames += 1
+
+            # main loop
+            index = 0
+            startTime = time.time()
+            startFrameTime = time.time()
+            while True:
+                isTrue, frame = capture.read()
+
+                if (not isTrue) or (not index % converter < 1):
+                    break
+
+                if frameCounting:
+                    print("Frame: " + str(index+1) + '/' + str(nFrames), end=' | ')
+                    print(str(round(((index+1) / nFrames * 100), 1)) + '%', end='')
+
+                    elapsedTime = time.time() - startFrameTime
+                    elapsedTime = elapsedTime * (nFrames - (index+1))
+
+                    if index+1 == nFrames:
+                        print('', end='\r')
+                        print(" " * 75, end='\r')
+                        print("Done in ", end='')
+                        VoronoiVideo.__printEstimatedTime(time.time() - startTime, withStartTime=True)
+                        print()
+                    else:
+                        VoronoiVideo.__printEstimatedTime(elapsedTime)
+                        print('', end='\r')
+                        
+                    startFrameTime = time.time()
+
+                frame = VoronoiImage.generate(
+                    frame,
+                    nPoints,
+                    bluringKernelSize=bluringKernelSize,
+                    numberOfLloydsIters=numberOfLloydsIters
+                    )
+                
                 videoOutput.write(frame)
+
+                index += 1
+
+            # release memory space
+            capture.release()
             videoOutput.release()
